@@ -1,0 +1,45 @@
+===> 1.x.x
+
+  [ ] license ( admin panel where i can add working passwords )
+  [ ] domain / ips brute
+  [ ] working bingip2hosts
+  [ ] anti fail2ban
+  [ ] honeypot detection system
+  [ ] sandbox detection
+  [ ] no ssh saves to another files ( it's good for user as SOCKS 4 )
+  [ ] anti dupe system ( no double )
+  [ ] randomize ipfile (sort as random ips.txt)
+  [ ] random brute (take random ip from ips and random user:pass from user
+      files ) and brute it
+
+
+===> 1.0.0
+
+  [x] mark stable + release
+
+
+===> 0.0.3
+
+  [x] implement remote ssh command exec
+  [x] implement random target cracking
+  [x] implement read timeout for banner grabbing
+  [x] print found login only if '-v' was chosen
+  [x] os exit on found login
+  [x] remove colorama bullshit
+  [x] fix banner grab issue (non-banner sshds, e.g. 'open' only were ignored)
+  [x] by default don't use masscan's --banner option
+
+
+===> 0.0.2
+
+  [x] use deque() rather than lists for MT
+
+
+===> 0.0.1
+
+  [x] standalone file with all libraries included
+  [x] asynchron multithreaded
+  [x] grab banners
+  [x] choose port for brute
+  [x] initial version
+
