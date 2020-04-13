@@ -6,7 +6,7 @@ python-masscan module.
 
 ```
 [ hacker@blackarch ~ ]$ sshprank -H
---==[ sshprank ]==--
+--==[ sshprank by nullsecurity.net ]==--
 
 usage
 
