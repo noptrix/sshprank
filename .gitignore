@@ -9,10 +9,12 @@ id_rsa
 *.key
 *.log
 *.o
+owned.txt
 passwd
 *.pyc
 __pycache__
 shadow
+sshds.txt
 *.swn
 *.swo
 *.swp
