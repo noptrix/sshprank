@@ -15,6 +15,13 @@
 
 ===> 1.0.0
 
+  [x] fix color codes
+  [x] use new python format style (f'{foo}')
+  [x] add leet and important ascii banner
+
+
+===> 1.0.0
+
   [x] mark stable + release
 
 
