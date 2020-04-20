@@ -7,7 +7,14 @@ python-masscan module.
 
 ```
 [ hacker@blackarch ~ ]$ sshprank -H
---==[ sshprank by nullsecurity.net ]==--
+              __                           __
+   __________/ /_  ____  _________ _____  / /__
+  / ___/ ___/ __ \/ __ \/ ___/ __ `/ __ \/ //_/
+ (__  |__  ) / / / /_/ / /  / /_/ / / / / ,<
+/____/____/_/ /_/ .___/_/   \__,_/_/ /_/_/|_|
+               /_/
+
+      --== [ by nullsecurity.net ] ==--
 
 usage
 
