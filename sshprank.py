@@ -34,7 +34,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -42,14 +42,23 @@ __license__ = 'MIT'
 SUCCESS = 0
 FAILURE = 1
 
-NORM = '\033[0;37;40m'
-BOLD = '\033[1;37;40m'
-RED = '\033[1;31;40m'
-GREEN = '\033[1;32;40m'
-YELLOW = '\033[1;33;40m'
-BLUE = '\033[1;34;40m'
+NORM = '\033[0;37;10m'
+BOLD = '\033[1;37;10m'
+RED = '\033[1;31;10m'
+GREEN = '\033[1;32;10m'
+YELLOW = '\033[1;33;10m'
+BLUE = '\033[1;34;10m'
 
-BANNER = '--==[ sshprank by nullsecurity.net ]==--'
+BANNER = BLUE + '''\
+              __                           __
+   __________/ /_  ____  _________ _____  / /__
+  / ___/ ___/ __ \/ __ \/ ___/ __ `/ __ \/ //_/
+ (__  |__  ) / / / /_/ / /  / /_/ / / / / ,<
+/____/____/_/ /_/ .___/_/   \__,_/_/ /_/_/|_|
+               /_/
+''' + NORM + '''
+      --== [ by nullsecurity.net ] ==--'''
+
 HELP = BOLD + '''usage''' + NORM + '''
 
   sshprank <mode> [opts] | <misc>
@@ -140,28 +149,28 @@ opts = {
 
 
 def log(msg='', _type='normal', esc='\n'):
-  iprefix = BOLD + BLUE + '[+] ' + NORM
-  gprefix = BOLD + GREEN + '[*] ' + NORM
-  wprefix = BOLD + YELLOW + '[!] ' + NORM
-  eprefix = BOLD + RED + '[-] ' + NORM
+  iprefix = f'{BOLD}{BLUE}[+] {NORM}'
+  gprefix = f'{BOLD}{GREEN}[*] {NORM}'
+  wprefix = f'{BOLD}{YELLOW}[!] {NORM}'
+  eprefix = f'{BOLD}{RED}[-] {NORM}'
 
   if _type == 'normal':
-    sys.stdout.write('{}'.format(msg))
+    sys.stdout.write(f'{msg}')
   elif _type == 'verbose':
-    sys.stdout.write('    > {}'.format(msg) + esc)
+    sys.stdout.write(f'    > {msg}{esc}')
   elif _type == 'info':
-    sys.stderr.write(iprefix + '{}'.format(msg) + esc)
+    sys.stderr.write(f'{iprefix}{msg}{esc}')
   elif _type == 'good':
-    sys.stderr.write(gprefix + '{}'.format(msg) + esc)
+    sys.stderr.write(f'{gprefix}{msg}{esc}')
   elif _type == 'warn':
-    sys.stderr.write(wprefix + '{}'.format(msg) + esc)
+    sys.stderr.write(f'{wprefix}{msg}{esc}')
   elif _type == 'error':
-    sys.stderr.write(eprefix + '{}'.format(msg) + esc)
+    sys.stderr.write(f'{eprefix}{msg}{esc}')
     sys.exit(FAILURE)
   elif _type == 'spin':
     sys.stderr.flush()
     for i in ('-', '\\', '|', '/'):
-      sys.stderr.write('\r' + BOLD + BLUE + '[' + i + '] ' + NORM + msg + ' ')
+      sys.stderr.write(f'\r{BOLD}{BLUE}[{i}] {NORM}{msg} ')
       time.sleep(0.025)
 
   return
@@ -237,7 +246,7 @@ def parse_cmdline(cmdline):
       if o == '-v':
         opts['verbose'] = True
       if o == '-V':
-        log('sshprank v' + __version__, _type='info')
+        log(f'sshprank v{__version__}', _type='info')
         sys.exit(SUCCESS)
       if o == '-H':
         log(HELP)
@@ -290,14 +299,14 @@ def grab_banner(host, port):
       banner = str(s.recv(1024).decode('utf-8')).strip()
       if not banner:
         banner = '<NO BANNER>'
-      log(host + ':' + port + ':' + banner + '\n')
+      log(f'{host}:{port}:{banner}\n')
       s.settimeout(None)
   except socket.timeout:
     if opts['verbose']:
-      log('socket timeout: ' + host + ':' + port, 'warn')
+      log(f'socket timeout: {host}:{port}', 'warn')
   except:
     if opts['verbose']:
-      log('could not connect: ' + host + ':' + port, 'warn')
+      log(f'could not connect: {host}:{port}', 'warn')
   finally:
     s.close()
 
@@ -322,16 +331,15 @@ def grep_service(scan, service='ssh', prot='tcp'):
       if scan.scan_result['scan'][h][prot][p]['state'] == 'open':
         if scan.scan_result['scan'][h][prot][p]['services']:
           for s in scan.scan_result['scan'][h][prot][p]['services']:
-            target = h + ':' + str(p) + ':' + s['banner'] + '\n'
+            target = f"{h}:{str(p)}:{s['banner']}\n"
             if opts['verbose']:
-              log('found sshd: {}'.format(target), 'good', esc='')
+              log(f'found sshd: {target}', 'good', esc='')
             if service in s['name']:
               targets.append(target)
         else:
           if opts['verbose']:
-            log('found sshd: {}:{}:<no banner grab>'.format(h, str(p)), 'good',
-              esc='\n')
-          targets.append(h + ':' + str(p) + ':<no banner grab>\n')
+            log(f'found sshd: {h}:{str(p)}:<no banner grab>', 'good', esc='\n')
+          targets.append(f'{h}:{str(p)}:<no banner grab>\n')
 
   return targets
 
@@ -341,7 +349,7 @@ def log_targets(targets, logfile):
     with open(logfile, 'a+') as f:
       f.writelines(targets)
   except (FileNotFoundError, PermissionError) as err:
-    log(err.args[1].lower() + ': ' + logfile, 'error')
+    log(f'{err.args[1].lower()}: {logfile}', 'error')
 
   return
 
@@ -360,10 +368,10 @@ def crack_login(host, port, username, password):
   try:
     cli.connect(host, port, username, password, timeout=opts['ctimeout'],
       allow_agent=False, look_for_keys=False, auth_timeout=opts['ctimeout'])
-    login = '{0}:{1}:{2}:{3}'.format(host, port, username, password)
-    log_targets(login + '\n', opts['logfile'])
+    login = f'{host}:{port}:{username}:{password}'
+    log_targets(f'{login}\n', opts['logfile'])
     if opts['verbose']:
-      log('found login: {}'.format(login), _type='good')
+      log(f'found login: {login}', _type='good')
     if opts['cmd']:
       log('sending your ssh command', 'info')
       stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
@@ -381,15 +389,15 @@ def crack_login(host, port, username, password):
         reason = 'auth timeout'
       else:
         reason = 'unknown'
-      log('login failure: {0}:{1} ({2})'.format(host, port, reason), 'warn')
+      log(f'login failure: {host}:{port} ({reason})', 'warn')
     else:
       pass
   except (paramiko.SSHException, socket.error):
     if opts['verbose']:
-      log('could not connect: {0}:{1}'.format(host, port), 'warn')
+      log(f'could not connect: {host}:{port}', 'warn')
   except Exception as err:
     if opts['verbose']:
-      log('something went wrong: ' + str(err), 'warn')
+      log(f'something went wrong: {str(err)}', 'warn')
   finally:
     cli.close()
 
@@ -524,7 +532,7 @@ def check_banners():
           for port in ports:
             f = exe.submit(grab_banner, host, port)
   except (FileNotFoundError, PermissionError) as err:
-    log(err.args[1].lower() + ': ' + opts['targetlist'], 'error')
+    log(f"{err.args[1].lower()}: {opts['targetlist']}", 'error')
 
   return
 
