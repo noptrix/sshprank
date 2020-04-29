@@ -18,6 +18,7 @@
 #                                                                              #
 ################################################################################
 
+
 import getopt
 import os
 import sys
@@ -28,13 +29,13 @@ import ipaddress
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import warnings
 import logging
-import masscan as masscan
-import paramiko as paramiko
+import masscan
+import paramiko
 from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -79,7 +80,7 @@ HELP = BOLD + '''usage''' + NORM + '''
                           options are always on: '-sS -oX - --open'.
                           NOTE: if you intent to use the '--banner' option then
                           you need to specify '--source-ip <some_ipaddr>' which
-                          is needed by masscan.
+                          is needed by masscan. better check masscan options!
 
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be
@@ -96,9 +97,9 @@ HELP = BOLD + '''usage''' + NORM + '''
   -P <file>             - list of passwords
   -C <file>             - list of user:pass combination
   -x <num>              - num threads for parallel host crack (default: 20)
-  -s <num>              - num threads for parallel service crack (default: 10)
+  -s <num>              - num threads for parallel service crack (default: 20)
   -X <num>              - num threads for parallel login crack (default: 20)
-  -B <num>              - num threads for parallel banner grabbing (default: 50)
+  -B <num>              - num threads for parallel banner grabbing (default: 70)
   -T <sec>              - num sec for connect timeout (default: 2s)
   -R <sec>              - num sec for (banner) read timeout (default: 2s)
   -o <file>             - write found logins to file. format:
@@ -119,7 +120,7 @@ HELP = BOLD + '''usage''' + NORM + '''
   $ ./sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
 
   # first scan then crack from founds ssh services
-  $ sudo ./sshprank -m '-p22,2022 --rate=5000 --source-ip 192.168.13.37 \\
+  $ sudo ./sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \\
     --range 192.168.13.1/24'
 
   # generate 1k random ipv4 addresses, then port-scan (tcp/22 here) with 1k p/s
@@ -137,9 +138,9 @@ opts = {
   'user': 'root',
   'pass': 'root',
   'hthreads': 20,
-  'sthreads': 10,
+  'sthreads': 20,
   'lthreads': 20,
-  'bthreads': 50,
+  'bthreads': 70,
   'ctimeout': 2,
   'rtimeout': 2,
   'logfile': 'owned.txt',
@@ -318,7 +319,11 @@ def portscan():
     m = masscan.PortScanner()
     m.scan(hosts='', ports='0', arguments=opts['masscan_opts'], sudo=True)
   except masscan.NetworkConnectionError as err:
+    log('\n')
     log('no sshds found or network unreachable', 'error')
+  except Exception as err:
+    log('\n')
+    log(f'unknown masscan error occured: str({err})', 'error')
 
   return m
 
