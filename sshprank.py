@@ -36,7 +36,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -563,6 +563,18 @@ def check_banners():
   return
 
 
+def crack_shodan(targets):
+  log(f'w00t w00t, found {len(targets)} sshds', 'good')
+  log('cracking shodan targets', 'info')
+  opts['targetlist'] = 'sshds.txt'
+  log_targets(targets, opts['targetlist'])
+  log(f'saved found sshds to {opts["targetlist"]}', 'good')
+  log('cracking found targets', 'info')
+  crack_multi()
+
+  return
+
+
 def shodan_search():
   global opts
   targets = []
@@ -590,18 +602,6 @@ def shodan_search():
   return targets
 
 
-def crack_shodan(targets):
-  log(f'w00t w00t, found {len(targets)} sshds', 'good')
-  log('cracking shodan targets', 'info')
-  opts['targetlist'] = 'sshds.txt'
-  log_targets(targets, opts['targetlist'])
-  log(f'saved found sshds to {opts["targetlist"]}', 'good')
-  log('cracking found targets', 'info')
-  crack_multi()
-
-  return
-
-
 def main(cmdline):
   sys.stderr.write(BANNER + '\n\n')
   check_argc(cmdline)
@@ -627,8 +627,7 @@ def main(cmdline):
     elif '-s' in cmdline:
       log('searching for sshds via shodan', 'info')
       targets = shodan_search()
-      tlen = len(targets)
-      if tlen > 0:
+      if len(targets) > 0:
         crack_shodan(targets)
       else:
         log('no sshds found :(', 'info')
