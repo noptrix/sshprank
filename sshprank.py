@@ -134,7 +134,7 @@ HELP = BOLD + '''usage''' + NORM + '''
   # and crack login 'root:root' on found sshds
   $ sudo ./sshprank -m '-p22 --rate=1000' -r 1000 -v
 
-  # search 50 ssh servers  via shodan and crack logins using 'root:root' on
+  # search 50 ssh servers via shodan and crack logins using 'root:root' against
   # found sshds
   $ sudo ./sshprank -s 'SSH:1:50'
 
