@@ -467,6 +467,7 @@ def run_threads(host, ports, val='single'):
           for line in cf:
             try:
               l = line.split(':')
+              print(l[0].rstrip(), l[1].rstrip())
               futures.append(exe.submit(crack_login, host, port, l[0].rstrip(),
                 l[1].rstrip()))
             except IndexError:

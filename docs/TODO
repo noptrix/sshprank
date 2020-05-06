@@ -1,5 +1,6 @@
 ===> 1.x.x
 
+  [ ] add option to spoof client (paramiko) ssh-version
   [ ] license ( admin panel where i can add working passwords )
   [ ] domain / ips brute
   [ ] working bingip2hosts
