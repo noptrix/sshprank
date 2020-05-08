@@ -36,7 +36,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -83,7 +83,7 @@ HELP = BOLD + '''usage''' + NORM + '''
                           you need to specify '--source-ip <some_ipaddr>' which
                           is needed by masscan. better check masscan options!
 
-  -s <str:page:lim>     - search ssh servers using shodan and crack logins.
+  -s <str;page;lim>     - search ssh servers using shodan and crack logins.
                           see examples below. note: you need a better API key
                           than this one i offer in order to search more than 100
                           (= 1 page) ssh servers. so if you use this one use
@@ -136,7 +136,7 @@ HELP = BOLD + '''usage''' + NORM + '''
 
   # search 50 ssh servers via shodan and crack logins using 'root:root' against
   # found sshds
-  $ sshprank -s 'SSH:1:50'
+  $ sshprank -s 'SSH;1;50'
 
   # grab banners and output to file with format supported for '-l' option
   $ sshprank -b hosts.txt > sshds2.txt
@@ -579,7 +579,7 @@ def shodan_search():
   global opts
   targets = []
 
-  s = opts['sho_opts'].split(':')
+  s = opts['sho_opts'].split(';')
   if len(s) != 3:
     log('format wrong, check usage and examples', 'error')
   opts['sho_str'] = s[0]
