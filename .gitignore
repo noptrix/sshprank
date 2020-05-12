@@ -11,6 +11,7 @@ id_rsa
 *.o
 owned.txt
 passwd
+paused.conf
 *.pyc
 __pycache__
 shadow

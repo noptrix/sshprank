@@ -42,7 +42,7 @@ modes
                           see examples below. note: you need a better API key
                           than this one i offer in order to search more than 100
                           (= 1 page) ssh servers. so if you use this one use
-                          '1' for 'page'. don't bother me with this, bitch
+                          '1' for 'page'.
 
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be

@@ -36,7 +36,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -87,7 +87,7 @@ HELP = BOLD + '''usage''' + NORM + '''
                           see examples below. note: you need a better API key
                           than this one i offer in order to search more than 100
                           (= 1 page) ssh servers. so if you use this one use
-                          '1' for 'page'. don't bother me with this, bitch
+                          '1' for 'page'.
 
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be
@@ -131,7 +131,7 @@ HELP = BOLD + '''usage''' + NORM + '''
     --range 192.168.13.1/24'
 
   # generate 1k random ipv4 addresses, then port-scan (tcp/22 here) with 1k p/s
-  # and crack login 'root:root' on found sshds
+  # and crack logins using 'root:root' on found sshds
   $ sudo sshprank -m '-p22 --rate=1000' -r 1000 -v
 
   # search 50 ssh servers via shodan and crack logins using 'root:root' against
@@ -183,12 +183,12 @@ def log(msg='', _type='normal', esc='\n'):
     sys.stderr.write(f'{wprefix}{msg}{esc}')
   elif _type == 'error':
     sys.stderr.write(f'{eprefix}{msg}{esc}')
-    sys.exit(FAILURE)
+    os._exit(FAILURE)
   elif _type == 'spin':
     sys.stderr.flush()
     for i in ('-', '\\', '|', '/'):
       sys.stderr.write(f'\r{BOLD}{BLUE}[{i}] {NORM}{msg} ')
-      time.sleep(0.025)
+      time.sleep(0.02)
 
   return
 
@@ -398,6 +398,8 @@ def crack_login(host, port, username, password):
     log_targets(f'{login}\n', opts['logfile'])
     if opts['verbose']:
       log(f'found login: {login}', _type='good')
+    else:
+      log(f'found a login (check {opts["logfile"]})', _type='good')
     if opts['cmd']:
       log('sending your ssh command', 'info')
       stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
@@ -534,11 +536,12 @@ def crack_scan():
     status(future, 'scanning sshds')
   log('\n')
   targets = grep_service(future.result())
+  num_targets = len(targets)
 
-  if len(targets) > 0:
+  if num_targets > 0:
     opts['targetlist'] = 'sshds.txt'
     log_targets(targets, opts['targetlist'])
-    log(f'saved found sshds to {opts["targetlist"]}', 'good')
+    log(f'found {num_targets} active sshds', 'good')
     log('cracking found targets', 'info')
     crack_multi()
   else:
@@ -602,6 +605,13 @@ def shodan_search():
   return targets
 
 
+def is_root():
+  if os.geteuid() == 0:
+    return True
+
+  return False
+
+
 def main(cmdline):
   sys.stderr.write(BANNER + '\n\n')
   check_argc(cmdline)
@@ -617,13 +627,16 @@ def main(cmdline):
       log('cracking multiple targets', 'info')
       crack_multi()
     elif '-m' in cmdline:
-      if '-r' in cmdline:
-        log('scanning and cracking random targets', 'info')
-        crack_random()
-        crack_scan()
+      if is_root():
+        if '-r' in cmdline:
+          log('scanning and cracking random targets', 'info')
+          crack_random()
+          crack_scan()
+        else:
+          log('scanning and cracking targets', 'info')
+          crack_scan()
       else:
-        log('scanning and cracking targets', 'info')
-        crack_scan()
+        log('get r00t for this option', 'error')
     elif '-s' in cmdline:
       log('searching for sshds via shodan', 'info')
       targets = shodan_search()
@@ -635,9 +648,11 @@ def main(cmdline):
       log('grabbing banners', 'info', esc='\n\n')
       check_banners()
   except KeyboardInterrupt:
-     log('interrupted by user', _type='error')
+    log('\n')
+    log('you aborted me', _type='warn')
+    os._exit(SUCCESS)
   finally:
-    log('done!', 'info')
+    log('game over', 'info')
 
   return
 
