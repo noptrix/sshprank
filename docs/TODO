@@ -16,6 +16,7 @@
 
 ===> 1.2.1
 
+  [x] only print exclusion infos in verbose mode
   [x] use spin() output for scanning and cracking targets
   [x] update wordings in the examples
 
