@@ -6,6 +6,7 @@ python-masscan and shodan module.
 # Usage
 
 ```
+[ hacker@blackarch ~ ]$ sshprank -H
               __                           __
    __________/ /_  ____  _________ _____  / /__
   / ___/ ___/ __ \/ __ \/ ___/ __ `/ __ \/ //_/
