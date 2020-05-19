@@ -14,6 +14,12 @@
       files ) and brute it
 
 
+===> 1.2.1
+
+  [x] use spin() output for scanning and cracking targets
+  [x] update wordings in the examples
+
+
 ===> 1.2.0
 
   [x] exclude targets if service is not running or pubkey auth only is supported

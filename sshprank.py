@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -127,9 +127,9 @@ HELP = BOLD + '''usage''' + NORM + '''
   # crack targets from a given list with user admin, pw-list and 20 host-threads
   $ sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
 
-  # first scan then crack from founds ssh services
+  # first scan then crack from founds ssh services using 'root:admin'
   $ sudo sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \\
-    --range 192.168.13.1/24'
+    --range 192.168.13.1/24' -p admin
 
   # generate 1k random ipv4 addresses, then port-scan (tcp/22 here) with 1k p/s
   # and crack logins using 'root:root' on found sshds
@@ -190,8 +190,8 @@ def log(msg='', _type='normal', esc='\n'):
   elif _type == 'spin':
     sys.stderr.flush()
     for i in ('-', '\\', '|', '/'):
-      sys.stderr.write(f'\r{BOLD}{BLUE}[{i}] {NORM}{msg} ')
-      time.sleep(0.02)
+      sys.stderr.write(f'{BOLD}{BLUE}[{i}] {NORM}{msg}')
+      #time.sleep(0.02)
 
   return
 
@@ -423,11 +423,13 @@ def crack_login(host, port, username, password):
         reason = 'auth timeout'
       else:
         reason = 'unknown'
+      log()
       log(f'login failure: {host}:{port} ({reason})', 'warn')
     else:
       pass
   except (paramiko.ssh_exception.NoValidConnectionsError, socket.error):
-    log(f'could not connect: {host}:{port} (excluding this target)', 'warn')
+    if opts['verbose']:
+      log(f'could not connect: {host}:{port} (excluding this target)', 'warn')
     excluded[host].add(port)
   except paramiko.SSHException as err:
     #if opts['verbose']:
@@ -549,7 +551,7 @@ def crack_scan():
 
   with ThreadPoolExecutor(1) as e:
     future = e.submit(portscan)
-    status(future, 'scanning sshds')
+    status(future, 'scanning sshds\r')
   log('\n')
   targets = grep_service(future.result())
   num_targets = len(targets)
@@ -558,8 +560,10 @@ def crack_scan():
     opts['targetlist'] = 'sshds.txt'
     log_targets(targets, opts['targetlist'])
     log(f'found {num_targets} active sshds', 'good')
-    log('cracking found targets', 'info')
-    crack_multi()
+    with ThreadPoolExecutor(1) as e:
+      future = e.submit(crack_multi)
+      status(future, 'cracking found sshds\r')
+    log('\n')
   else:
     log('no sshds found :(', _type='warn')
 
@@ -641,8 +645,10 @@ def main(cmdline):
       log('cracking single target', 'info')
       crack_single()
     elif '-l' in cmdline:
-      log('cracking multiple targets', 'info')
-      crack_multi()
+      with ThreadPoolExecutor(1) as e:
+        future = e.submit(crack_multi)
+        status(future, 'cracking multiple targets\r')
+      log('\n')
     elif '-m' in cmdline:
       if is_root():
         if '-r' in cmdline:
@@ -662,7 +668,7 @@ def main(cmdline):
       else:
         log('no sshds found :(', 'info')
     elif '-b' in cmdline:
-      log('grabbing banners', 'info', esc='\n\n')
+      log('grabbing banners', 'info', esc='\n')
       check_banners()
   except KeyboardInterrupt:
     log('\n')
