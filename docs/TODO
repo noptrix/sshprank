@@ -14,6 +14,12 @@
       files ) and brute it
 
 
+===> 1.2.2
+
+  [x] call log() only in one place after AuthenticationException occurs
+  [x] skip further actions if targets file could not be read ('-l' option)
+
+
 ===> 1.2.1
 
   [x] only print exclusion infos in verbose mode

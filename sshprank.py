@@ -26,8 +26,8 @@ import socket
 import time
 import random
 import ipaddress
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait, \
-  ALL_COMPLETED
+from concurrent.futures import \
+  ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
 import warnings
 import logging
 import masscan
@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -168,7 +168,7 @@ opts = {
 excluded = {}
 
 
-def log(msg='', _type='normal', esc='\n'):
+def log(msg='', _type='normal', pre_esc='', esc='\n'):
   iprefix = f'{BOLD}{BLUE}[+] {NORM}'
   gprefix = f'{BOLD}{GREEN}[*] {NORM}'
   wprefix = f'{BOLD}{YELLOW}[!] {NORM}'
@@ -179,18 +179,18 @@ def log(msg='', _type='normal', esc='\n'):
   elif _type == 'verbose':
     sys.stdout.write(f'    > {msg}{esc}')
   elif _type == 'info':
-    sys.stderr.write(f'{iprefix}{msg}{esc}')
+    sys.stderr.write(f'{pre_esc}{iprefix}{msg}{esc}')
   elif _type == 'good':
-    sys.stderr.write(f'{gprefix}{msg}{esc}')
+    sys.stderr.write(f'{pre_esc}{gprefix}{msg}{esc}')
   elif _type == 'warn':
-    sys.stderr.write(f'{wprefix}{msg}{esc}')
+    sys.stderr.write(f'{pre_esc}{wprefix}{msg}{esc}')
   elif _type == 'error':
-    sys.stderr.write(f'{eprefix}{msg}{esc}')
+    sys.stderr.write(f'{pre_esc}{eprefix}{msg}{esc}')
     os._exit(FAILURE)
   elif _type == 'spin':
     sys.stderr.flush()
     for i in ('-', '\\', '|', '/'):
-      sys.stderr.write(f'{BOLD}{BLUE}[{i}] {NORM}{msg}')
+      sys.stderr.write(f'{pre_esc}{BOLD}{BLUE}[{i}] {NORM}{msg}')
       #time.sleep(0.02)
 
   return
@@ -381,9 +381,9 @@ def log_targets(targets, logfile):
   return
 
 
-def status(future, msg):
+def status(future, msg, pre_esc=''):
   while future.running():
-    log(msg, 'spin')
+    log(msg, 'spin', pre_esc)
 
   return
 
@@ -415,7 +415,6 @@ def crack_login(host, port, username, password):
     if opts['verbose']:
       if 'publickey' in str(err):
         reason = 'pubkey auth'
-        log(f'pubkey auth: {host}:{port} (excluding this target)', 'warn')
         excluded[host].add(port)
       elif 'Authentication failed' in str(err):
         reason = 'auth failed'
@@ -423,22 +422,21 @@ def crack_login(host, port, username, password):
         reason = 'auth timeout'
       else:
         reason = 'unknown'
-      log()
       log(f'login failure: {host}:{port} ({reason})', 'warn')
     else:
       pass
   except (paramiko.ssh_exception.NoValidConnectionsError, socket.error):
     if opts['verbose']:
-      log(f'could not connect: {host}:{port} (excluding this target)', 'warn')
+      log(f'could not connect: {host}:{port}', 'warn')
     excluded[host].add(port)
   except paramiko.SSHException as err:
     #if opts['verbose']:
     #  log(f'paramiko: {str(err)}', 'warn')
     pass
   except Exception as err:
-    pass
     #if opts['verbose']:
     #  log(f'other error: {str(err)}', 'warn')
+    pass
   finally:
     cli.close()
 
@@ -520,16 +518,19 @@ def crack_single():
 
 
 def crack_multi():
-  with ThreadPoolExecutor(opts['hthreads']) as exe:
+  try:
     with open(opts['targetlist'], 'r', encoding='latin-1') as f:
-      for line in f:
-        host = line.rstrip()
-        if ':' in line:
-          host = line.split(':')[0]
-          ports = [p.rstrip() for p in line.split(':')[1].split(',')]
-        else:
-          ports = ['22']
-        exe.submit(run_threads, host, ports)
+      with ThreadPoolExecutor(opts['hthreads']) as exe:
+        for line in f:
+          host = line.rstrip()
+          if ':' in line:
+            host = line.split(':')[0]
+            ports = [p.rstrip() for p in line.split(':')[1].split(',')]
+          else:
+            ports = ['22']
+          exe.submit(run_threads, host, ports)
+  except (FileNotFoundError, PermissionError) as err:
+    log(f"{err.args[1].lower()}: {opts['targetlist']}", 'error')
 
   return
 
@@ -551,7 +552,7 @@ def crack_scan():
 
   with ThreadPoolExecutor(1) as e:
     future = e.submit(portscan)
-    status(future, 'scanning sshds\r')
+    status(future, 'scanning sshds', pre_esc='\r')
   log('\n')
   targets = grep_service(future.result())
   num_targets = len(targets)
