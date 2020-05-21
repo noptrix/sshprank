@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -108,8 +108,8 @@ HELP = BOLD + '''usage''' + NORM + '''
   -S <num>              - num threads for parallel service crack (default: 20)
   -X <num>              - num threads for parallel login crack (default: 20)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
-  -T <sec>              - num sec for connect timeout (default: 2s)
-  -R <sec>              - num sec for (banner) read timeout (default: 2s)
+  -T <sec>              - num sec for auth and connect timeout (default: 5s)
+  -R <sec>              - num sec for (banner) read timeout (default: 3s)
   -o <file>             - write found logins to file. format:
                           <host>:<port>:<user>:<pass> (default: owned.txt)
   -e                    - exit after first login was found. continue with other
@@ -143,6 +143,8 @@ HELP = BOLD + '''usage''' + NORM + '''
   $ sshprank -b hosts.txt > sshds2.txt
 '''
 
+stargets = []   # shodan
+excluded = {}
 opts = {
   'targets': [],
   'masscan_opts': '--open ',
@@ -158,14 +160,12 @@ opts = {
   'sthreads': 20,
   'lthreads': 20,
   'bthreads': 70,
-  'ctimeout': 2,
-  'rtimeout': 2,
+  'ctimeout': 5,
+  'rtimeout': 3,
   'logfile': 'owned.txt',
   'exit': False,
   'verbose': False
 }
-
-excluded = {}
 
 
 def log(msg='', _type='normal', pre_esc='', esc='\n'):
@@ -592,7 +592,7 @@ def crack_shodan(targets):
   log('cracking shodan targets', 'info')
   opts['targetlist'] = 'sshds.txt'
   log_targets(targets, opts['targetlist'])
-  log(f'saved found sshds to {opts["targetlist"]}', 'good')
+  log(f'saved found sshds to {opts["targetlist"]}', 'info')
   log('cracking found targets', 'info')
   crack_multi()
 
@@ -601,7 +601,7 @@ def crack_shodan(targets):
 
 def shodan_search():
   global opts
-  targets = []
+  global stargets
 
   s = opts['sho_opts'].split(';')
   if len(s) != 3:
@@ -619,11 +619,11 @@ def shodan_search():
         if opts['verbose']:
           log(f'found sshd: {r["ip_str"]}:{r["port"]}:{banner}', 'good',
             esc='\n')
-        targets.append(f'{r["ip_str"]}:{r["port"]}:{banner}\n')
+        stargets.append(f'{r["ip_str"]}:{r["port"]}:{banner}\n')
   except shodan.APIError as e:
-    log(f"shodan error: {e}", 'error')
+    log(f'shodan error: {str(e)}', 'error')
 
-  return targets
+  return
 
 
 def is_root():
@@ -662,10 +662,12 @@ def main(cmdline):
       else:
         log('get r00t for this option', 'error')
     elif '-s' in cmdline:
-      log('searching for sshds via shodan', 'info')
-      targets = shodan_search()
-      if len(targets) > 0:
-        crack_shodan(targets)
+      with ThreadPoolExecutor(1) as e:
+        future = e.submit(shodan_search)
+        status(future, 'searching for sshds via shodan\r')
+      log('\n')
+      if len(stargets) > 0:
+        crack_shodan(stargets)
       else:
         log('no sshds found :(', 'info')
     elif '-b' in cmdline:
