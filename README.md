@@ -62,8 +62,8 @@ options
   -S <num>              - num threads for parallel service crack (default: 20)
   -X <num>              - num threads for parallel login crack (default: 20)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
-  -T <sec>              - num sec for connect timeout (default: 2s)
-  -R <sec>              - num sec for (banner) read timeout (default: 2s)
+  -T <sec>              - num sec for connect timeout (default: 5s)
+  -R <sec>              - num sec for (banner) read timeout (default: 3s)
   -o <file>             - write found logins to file. format:
                           <host>:<port>:<user>:<pass> (default: owned.txt)
   -e                    - exit after first login was found. continue with other
