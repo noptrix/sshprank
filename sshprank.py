@@ -8,7 +8,7 @@
 #                                                                              #
 # sshprank                                                                     #
 # A fast SSH mass-scanner, login cracker and banner grabber tool using the     #
-# python-masscan module.                                                       #
+# python-masscan and shodan module.                                            #
 #                                                                              #
 # NOTES                                                                        #
 # quick'n'dirty code                                                           #
