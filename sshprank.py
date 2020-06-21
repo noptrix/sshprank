@@ -345,7 +345,7 @@ def portscan():
     log('no sshds found or network unreachable', 'error')
   except Exception as err:
     log('\n')
-    log(f'unknown masscan error occured: str({err})', 'error')
+    log(f'unknown masscan error occurred: str({err})', 'error')
 
   return m
 
@@ -633,7 +633,11 @@ def is_root():
   return False
 
 
-def main(cmdline):
+def main(args=None):
+
+  if args is None:
+    cmdline = sys.argv[1:]
+
   sys.stderr.write(BANNER + '\n\n')
   check_argc(cmdline)
   parse_cmdline(cmdline)
@@ -697,5 +701,5 @@ if __name__ == '__main__':
   if not sys.warnoptions:
     warnings.simplefilter('ignore')
 
-  main(sys.argv[1:])
+  main()
 
