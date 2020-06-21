@@ -1,11 +1,24 @@
-# Description
+# sshprank
+
+## Description
 
 A fast SSH mass-scanner, login cracker and banner grabber tool using the
 python-masscan and shodan module.
 
-# Usage
+## Installation
 
+Clone the repository, make sure that you have a Python installation, change
+into the `sshprank` directory and install `sshprank`.
+
+```bash
+$ git clone git@github.com:noptrix/sshprank.git
+$ cd sshprank
+$ python3 setup.py install --user
 ```
+
+## Usage
+
+```bash
 [ hacker@blackarch ~ ]$ sshprank -H
               __                           __
    __________/ /_  ____  _________ _____  / /__
@@ -97,22 +110,23 @@ examples
   $ sshprank -b hosts.txt > sshds2.txt
 ```
 
-# Author
+## Author
 
-noptrix
+[noptrix](https://github.com/noptrix)
 
-# Notes
+## Notes
 
 - quick'n'dirty code
 - sshprank is already packaged and available for [BlackArch Linux](https://www.blackarch.org/)
 - My master-branches are always stable; dev-branches are created for current work.
 - All of my public stuff you find are officially announced and published via [nullsecurity.net](https://www.nullsecurity.net).
 
-# License
+## License
 
 Check docs/LICENSE.
 
-# Disclaimer
+## Disclaimer
+
 We hereby emphasize, that the hacking related stuff found on
 [nullsecurity.net](http://nullsecurity.net/) are only for education purposes.
 We are not responsible for any damages. You are responsible for your own
