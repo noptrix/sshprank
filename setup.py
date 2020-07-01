@@ -21,7 +21,7 @@ setup(
     maintainer="Fabian Affolter",
     maintainer_email="fabian@affolter-engineering.ch",
     license="MIT",
-    install_requires=["paramiko", "shodan", "shodan", "python-masscan", "click"],
+    install_requires=["paramiko", "shodan", "python-masscan"],
     packages=find_packages(),
     zip_safe=True,
     include_package_data=True,
