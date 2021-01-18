@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.2.3'
+__version__ = '1.3.0'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -445,16 +445,13 @@ def crack_login(host, port, username, password):
 
 def run_threads(host, ports, val='single'):
   global excluded
-  futures = deque()
 
   excluded[host] = set()
 
   with ThreadPoolExecutor(opts['sthreads']) as e:
     for port in ports:
       if port not in excluded[host]:
-        futures.append(e.submit(crack_login, host, port, opts['user'],
-          opts['pass']))
-    wait(futures, None, ALL_COMPLETED)
+        e.submit(crack_login, host, port, opts['user'], opts['pass'])
 
     with ThreadPoolExecutor(opts['lthreads']) as exe:
       if 'userlist' in opts:
@@ -466,34 +463,30 @@ def run_threads(host, ports, val='single'):
 
       if 'userlist' in opts and 'passlist' in opts:
         for u in uf:
-          pf = open(opts['passlist'], 'r', encoding='latin-1')
           for p in pf:
-            futures.append(exe.submit(crack_login, host, port, u.rstrip(),
-              p.rstrip()))
+            exe.submit(crack_login, host, port, u.rstrip(), p.rstrip())
 
       if 'userlist' in opts and 'passlist' not in opts:
         for u in uf:
-          futures.append(exe.submit(crack_login, host, port, u.rstrip(),
-            opts['pass']))
+          exe.submit(crack_login, host, port, u.rstrip(), opts['pass'])
 
       if 'passlist' in opts and 'userlist' not in opts:
         for p in pf:
-          futures.append(exe.submit(crack_login, host, port, opts['user'],
-            p.rstrip()))
+          exe.submit(crack_login, host, port, opts['user'], p.rstrip())
 
       if 'combolist' in opts:
         for line in cf:
           try:
             l = line.split(':')
-            futures.append(exe.submit(crack_login, host, port, l[0].rstrip(),
-              l[1].rstrip()))
+            exe.submit(crack_login, host, port, l[0].rstrip(), l[1].rstrip())
           except IndexError:
             log('combo list format: <user>:<pass>', 'error')
 
-      if opts['exit']:
-        for x in as_completed(futures):
-          if x.result() == SUCCESS:
-            os._exit(SUCCESS)
+      # TODO
+      #if opts['exit']:
+      #  for x in as_completed(futures):
+      #    if x.result() == SUCCESS:
+      #      os._exit(SUCCESS)
 
   return
 
