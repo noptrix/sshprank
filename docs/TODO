@@ -14,6 +14,14 @@
       files ) and brute it
 
 
+===> 1.3.0
+
+  [x] updated default thread nums for host, service and login.
+  [x] add new option to not output ssh command results ('-N')
+  [x] read and run commands from file on target (github: #5)
+  [x] fix high memory usage (github: #9)
+
+
 ===> 1.2.3
 
   [x] increase default auth and connect timeout

