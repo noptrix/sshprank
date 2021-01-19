@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.3.1'
+__version__ = '1.3.2'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -106,7 +106,7 @@ HELP = BOLD + '''usage''' + NORM + '''
   -p                    - single password (default: root)
   -P <file>             - list of passwords
   -C <file>             - list of user:pass combination
-  -x <num>              - num threads for parallel host crack (default: 50)
+  -x <num>              - num threads for parallel host crack (default: 10)
   -S <num>              - num threads for parallel service crack (default: 1)
   -X <num>              - num threads for parallel login crack (default: 5)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
@@ -159,7 +159,7 @@ opts = {
   'cmd_no_out': False,
   'user': 'root',
   'pass': 'root',
-  'hthreads': 50,
+  'hthreads': 10,
   'sthreads': 1,
   'lthreads': 5,
   'bthreads': 70,
@@ -485,7 +485,6 @@ def run_threads(host, ports, val='single'):
           pf = open(opts['passlist'], 'r', encoding='latin-1')
           for p in pf:
             exe.submit(crack_login, host, port, u.rstrip(), p.rstrip())
-          pf.close()
 
       if 'userlist' in opts and 'passlist' not in opts:
         for u in uf:
