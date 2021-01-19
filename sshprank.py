@@ -38,7 +38,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.3.3'
+__version__ = '1.3.4'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -483,30 +483,22 @@ def run_threads(host, ports, val='single'):
         e.submit(crack_login, host, port, opts['user'], opts['pass'])
 
     with ThreadPoolExecutor(opts['lthreads']) as exe:
-      if 'userlist' in opts:
-        uf = open(opts['userlist'], 'r', encoding='latin-1')
-      if 'passlist' in opts:
-        pf = open(opts['passlist'], 'r', encoding='latin-1')
-      if 'combolist' in opts:
-        cf = open(opts['combolist'], 'r', encoding='latin-1')
-
       if 'userlist' in opts and 'passlist' in opts:
-        for u in uf:
-          pf = open(opts['passlist'], 'r', encoding='latin-1')
-          for p in pf:
+        for u in opts['userlist']:
+          for p in opts['passlist']:
             exe.submit(crack_login, host, port, u.rstrip(), p.rstrip())
           pf.close()
 
       if 'userlist' in opts and 'passlist' not in opts:
-        for u in uf:
+        for u in opts['userlist']:
           exe.submit(crack_login, host, port, u.rstrip(), opts['pass'])
 
       if 'passlist' in opts and 'userlist' not in opts:
-        for p in pf:
+        for p in opts['passlist']:
           exe.submit(crack_login, host, port, opts['user'], p.rstrip())
 
       if 'combolist' in opts:
-        for line in cf:
+        for line in opts['combolist']:
           try:
             l = line.split(':')
             exe.submit(crack_login, host, port, l[0].rstrip(), l[1].rstrip())
