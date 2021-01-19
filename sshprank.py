@@ -33,11 +33,12 @@ import logging
 import masscan
 import paramiko
 import shodan
+import mmap
 from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.3.2'
+__version__ = '1.3.3'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -106,9 +107,9 @@ HELP = BOLD + '''usage''' + NORM + '''
   -p                    - single password (default: root)
   -P <file>             - list of passwords
   -C <file>             - list of user:pass combination
-  -x <num>              - num threads for parallel host crack (default: 10)
-  -S <num>              - num threads for parallel service crack (default: 1)
-  -X <num>              - num threads for parallel login crack (default: 5)
+  -x <num>              - num threads for parallel host crack (default: 30)
+  -S <num>              - num threads for parallel service crack (default: 10)
+  -X <num>              - num threads for parallel login crack (default: 20)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
   -T <sec>              - num sec for auth and connect timeout (default: 5s)
   -R <sec>              - num sec for (banner) read timeout (default: 3s)
@@ -159,9 +160,9 @@ opts = {
   'cmd_no_out': False,
   'user': 'root',
   'pass': 'root',
-  'hthreads': 10,
-  'sthreads': 1,
-  'lthreads': 5,
+  'hthreads': 30,
+  'sthreads': 10,
+  'lthreads': 20,
   'bthreads': 70,
   'ctimeout': 5,
   'rtimeout': 3,
@@ -221,6 +222,15 @@ def parse_target(target):
   return dtarget
 
 
+def read_list(_file):
+  try:
+    with open(_file, 'r', encoding='latin-1') as f:
+      with mmap.mmap(f.fileno(), length=0, access=mmap.ACCESS_READ) as m:
+        return m.read().decode('latin-1').split()
+  except:
+    log(f'could not read wordlist {_file}', 'error')
+
+
 def parse_cmdline(cmdline):
   global opts
 
@@ -247,13 +257,13 @@ def parse_cmdline(cmdline):
       if o == '-u':
         opts['user'] = a
       if o == '-U':
-        opts['userlist'] = a
+        opts['userlist'] = read_list(a)
       if o == '-p':
         opts['pass'] = a
       if o == '-P':
-        opts['passlist'] = a
+        opts['passlist'] = read_list(a)
       if o == '-C':
-        opts['combolist'] = a
+        opts['combolist'] = read_list(a)
       if o == '-x':
         opts['hthreads'] = int(a)
       if o == '-S':
