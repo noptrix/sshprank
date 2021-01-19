@@ -37,7 +37,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -485,6 +485,7 @@ def run_threads(host, ports, val='single'):
           pf = open(opts['passlist'], 'r', encoding='latin-1')
           for p in pf:
             exe.submit(crack_login, host, port, u.rstrip(), p.rstrip())
+          pf.close()
 
       if 'userlist' in opts and 'passlist' not in opts:
         for u in uf:

@@ -14,6 +14,11 @@
       files ) and brute it
 
 
+===> 1.3.1
+
+  [x] close file descriptor...
+
+
 ===> 1.3.0
 
   [x] updated default thread nums for host, service and login.
