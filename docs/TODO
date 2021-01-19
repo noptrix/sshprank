@@ -17,7 +17,6 @@
 ===> 1.3.2
 
   [x] decrease default hosts threads num
-  [x] revert fd shit
 
 
 ===> 1.3.1
