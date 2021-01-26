@@ -14,6 +14,11 @@
       files ) and brute it
 
 
+===> 1.3.5
+
+  [x] remove pf.close() call
+
+
 ===> 1.3.4
 
   [x] remove open() calls
