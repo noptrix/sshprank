@@ -28,7 +28,7 @@ modes
 
   -m <opts> [-r <num>]  - pass arbitrary masscan opts, portscan given hosts and
                           crack for logins. found sshd services will be saved to
-                          'sshds.txt' in supported format for '-l' option and
+                          'sshds.txt' in supported format for '-h' option and
                           even for '-b'. use '-r' for generating random ipv4
                           addresses rather than scanning given hosts. these
                           options are always on: '-sS -oX - --open'.
@@ -92,7 +92,7 @@ examples
   # found sshds
   $ sshprank -s 'SSH;1;50'
 
-  # grab banners and output to file with format supported for '-l' option
+  # grab banners and output to file with format supported for '-h' option
   $ sshprank -b hosts.txt > sshds2.txt
 ```
 

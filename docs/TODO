@@ -14,8 +14,14 @@
       files ) and brute it
 
 
+===> 1.4.1
+
+  [x] updated help() and README.md (old options were present)
+
+
 ===> 1.4.0
 
+  [x] updated lists/* (added more default passwords and usernames)
   [x] add 'exclude host after first login was found' option (-e)
   [x] add 'exit sshprank after first login was found' option (-E)
   [x] swap options: '-C' -> '-c'
