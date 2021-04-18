@@ -38,7 +38,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
