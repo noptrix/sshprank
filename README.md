@@ -22,11 +22,9 @@ usage
 
 modes
 
-  -h <host:[ports]>     - single host to crack. multiple ports can be seperated
-                          by comma, e.g.: 22,2022,22222 (default port: 22)
-
-  -l <file>             - list of hosts to crack. format: <host>[:ports]. multiple
-                          ports can be seperated by comma (default port: 22)
+  -h <hosts[:ports]>    - single host or host list to crack. multiple ports
+                          can be separated by comma, e.g.: 127.0.0.1:22,222,2022
+                          (default port: 22)
 
   -m <opts> [-r <num>]  - pass arbitrary masscan opts, portscan given hosts and
                           crack for logins. found sshd services will be saved to
@@ -46,28 +44,29 @@ modes
 
   -b <file>             - list of hosts to grab sshd banner from
                           format: <host>[:ports]. multiple ports can be
-                          seperated by comma (default port: 22)
+                          separated by comma (default port: 22)
 
 options
 
   -r <num>              - generate <num> random ipv4 addresses, check for open
                           sshd port and crack for login (only with -m option!)
-  -c <cmd>              - execute this <cmd> on host if login was cracked
-  -u <user>             - single username (default: root)
-  -U <file>             - list of usernames
-  -p                    - single password (default: root)
-  -P <file>             - list of passwords
-  -C <file>             - list of user:pass combination
-  -x <num>              - num threads for parallel host crack (default: 20)
+  -u <user|file>        - single username or user list (default: root)
+  -p <pass|file>        - single password or password list (default: root)
+  -c <file>             - list of user:pass combination
+  -C <cmd|file>         - read commands from file (line by line) or execute a
+                          single command on host if login was cracked
+  -N                    - do not output ssh command results
+  -x <num>              - num threads for parallel host crack (default: 50)
   -S <num>              - num threads for parallel service crack (default: 20)
-  -X <num>              - num threads for parallel login crack (default: 20)
+  -X <num>              - num threads for parallel login crack (default: 5)
   -B <num>              - num threads for parallel banner grabbing (default: 70)
-  -T <sec>              - num sec for connect timeout (default: 5s)
+  -T <sec>              - num sec for auth and connect timeout (default: 5s)
   -R <sec>              - num sec for (banner) read timeout (default: 3s)
   -o <file>             - write found logins to file. format:
                           <host>:<port>:<user>:<pass> (default: owned.txt)
-  -e                    - exit after first login was found. continue with other
-                          hosts instead (default: off)
+  -e                    - exclude host after first login was found. continue
+                          with other hosts instead
+  -E                    - exit sshprank completely after first login was found
   -v                    - verbose mode. show found logins, sshds, etc.
                           (default: off)
 
@@ -79,7 +78,7 @@ misc
 examples
 
   # crack targets from a given list with user admin, pw-list and 20 host-threads
-  $ sshprank -l sshds.txt -u admin -P /tmp/passlist.txt -x 20
+  $ sshprank -h sshds.txt -u admin -P /tmp/passlist.txt -x 20
 
   # first scan then crack from founds ssh services using 'root:admin'
   $ sudo sshprank -m '-p22,2022 --rate 5000 --source-ip 192.168.13.37 \
