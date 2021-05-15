@@ -411,7 +411,7 @@ def crack_login(host, port, username, password):
   cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
   try:
-    if port not in excluded[host]:
+    if host not in excluded[host]:
       cli.connect(host, port, username, password, timeout=opts['ctimeout'],
         allow_agent=False, look_for_keys=False, auth_timeout=opts['ctimeout'])
       login = f'{host}:{port}:{username}:{password}'
