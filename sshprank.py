@@ -662,7 +662,7 @@ def main(cmdline):
 
   log('game started', 'info')
   try:
-    if not opts['targetlist']:
+    if not opts['targetlist'] and opts['targets']:
       log('cracking single target', 'info')
       crack_single()
     elif len(opts['targetlist']) > 0:
