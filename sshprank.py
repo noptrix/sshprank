@@ -375,13 +375,6 @@ def portscan():
 def grep_service(scan, service='ssh', prot='tcp'):
   targets = []
 
-  '''
-  import json
-  print(scan, type(scan))
-  print(scan.scan_result, type(scan.scan_result))
-  scan_result = json.loads(scan.scan_result)
-  '''
-
   scan_result = scan.scan_result
   for h in scan_result['scan'].keys():
     for p in scan_result['scan'][h][prot]:
