@@ -1,0 +1,14 @@
+btrfsutil==5.18.1
+configobj==5.1.0.dev0
+distlib==0.3.6
+filelock==3.8.0
+lit==14.0.6.dev0
+platformdirs==2.5.2
+psutil==5.9.1
+pycairo==1.21.0
+PyGObject==3.42.2
+Reflector==2021.11.20.2.41.3
+six==1.16.0
+terminator==2.1.1
+validate==5.1.0.dev0
+virtualenv==20.16.5

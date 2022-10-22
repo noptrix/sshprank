@@ -352,9 +352,15 @@ def grab_banner(host, port):
   return
 
 
+class PortScanner(masscan.PortScanner):
+    @property
+    def scan_result(self):
+        return self._scan_result
+
+
 def portscan():
   try:
-    m = masscan.PortScanner()
+    m = PortScanner()
     m.scan(hosts='', ports='0', arguments=opts['masscan_opts'], sudo=True)
   except masscan.NetworkConnectionError as err:
     log('\n')
@@ -369,11 +375,19 @@ def portscan():
 def grep_service(scan, service='ssh', prot='tcp'):
   targets = []
 
-  for h in scan.scan_result['scan'].keys():
-    for p in scan.scan_result['scan'][h][prot]:
-      if scan.scan_result['scan'][h][prot][p]['state'] == 'open':
-        if scan.scan_result['scan'][h][prot][p]['services']:
-          for s in scan.scan_result['scan'][h][prot][p]['services']:
+  '''
+  import json
+  print(scan, type(scan))
+  print(scan.scan_result, type(scan.scan_result))
+  scan_result = json.loads(scan.scan_result)
+  '''
+
+  scan_result = scan.scan_result
+  for h in scan_result['scan'].keys():
+    for p in scan_result['scan'][h][prot]:
+      if scan_result['scan'][h][prot][p]['state'] == 'open':
+        if scan_result['scan'][h][prot][p]['services']:
+          for s in scan_result['scan'][h][prot][p]['services']:
             target = f"{h}:{str(p)}:{s['banner']}\n"
             if opts['verbose']:
               log(f'found sshd: {target}', 'good', esc='')
