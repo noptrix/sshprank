@@ -3,6 +3,7 @@ admin
 demo
 demos
 dev
+developer
 ftp
 fwadmin
 guest
@@ -23,6 +24,7 @@ op
 operator
 oracle
 postgres
+power
 readonly
 root
 setup

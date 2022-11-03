@@ -3,6 +3,7 @@ admin:admin
 demo:demo
 demos:demos
 dev:dev
+developer:developer
 ftp:ftp
 fwadmin:fwadmin
 guest01:guest01
@@ -23,6 +24,7 @@ operator:operator
 op:op
 oracle:oracle
 postgres:postgres
+power:power
 readonly:readonly
 root:root
 setup:setup

@@ -38,7 +38,7 @@ from collections import deque
 
 
 __author__ = 'noptrix'
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 __copyright = 'santa clause'
 __license__ = 'MIT'
 
@@ -672,7 +672,7 @@ def main(cmdline):
     if not opts['targetlist'] and opts['targets']:
       log('cracking single target', 'info')
       crack_single()
-    elif len(opts['targetlist']) > 0:
+    elif len(opts['targetlist']) > 0 and '-b' not in cmdline:
       with ThreadPoolExecutor(1) as e:
         future = e.submit(crack_multi)
         status(future, 'cracking multiple targets\r')

@@ -167,6 +167,11 @@ pink123
 pink123!
 postgres
 postgres123
+power
+power1
+power1!
+power123
+power123!
 p@ssw0rd
 P@ssw0rd
 p@ssword
@@ -183,6 +188,12 @@ PW123!
 pw1234
 PW1234
 PW1234!
+pwd
+pwd1
+pwd1!
+Pwd1!
+pwd123
+pwd123!
 pwer1234!
 qwerty
 qwerty123
@@ -254,6 +265,10 @@ test123
 test123!
 test1234
 tester
+tester1
+tester1!
+tester123
+tester1234
 testtest
 TestTest
 tomcat

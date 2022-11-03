@@ -9,6 +9,10 @@
   [ ] sandbox detection
   [ ] no ssh saves to another files ( it's good for user as SOCKS 4 )
   [ ] anti dupe system ( no double )
+
+
+===> 1.5.0
+
   [ ] randomize ipfile (sort as random ips.txt)
   [ ] random brute (take random ip from ips and random user:pass from user
       files ) and brute it
